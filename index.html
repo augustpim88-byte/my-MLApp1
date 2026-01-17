@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Classifier</title>
+    <style>
+        /* จัดการ Font และ Layout พื้นฐาน */
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: #333;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        nav a:hover {
+            color: #4CAF50;
+        }
+
+        /* ส่วนจัดเนื้อหาให้อยู่ตรงกลาง (Center Alignment) */
+        section {
+            display: none; /* ซ่อนหน้าไว้ก่อน */
+            flex: 1;
+            flex-direction: column;
+            justify-content: center; /* แนวตั้งกลาง */
+            align-items: center;     /* แนวนอนกลาง */
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* หน้าที่กำลังแสดงผล */
+        section.active {
+            display: flex;
+        }
+
+        /* ตกแต่งปุ่ม "เลือกภาพ" */
+        .custom-file-upload {
+            display: inline-block;
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: 0.3s;
+        }
+
+        .custom-file-upload:hover {
+            background-color: #45a049;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 15px;
+            font-size: 1.5em;
+            color: #333;
+            border-top: 2px solid #eee;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a onclick="showPage('home')">Home</a>
+        <a onclick="showPage('check')">Check</a>
+        <a onclick="showPage('about')">About Us</a>
+    </nav>
+
+    <section id="home" class="active">
+        <h1>ยินดีต้อนรับสู่ AI Classifier</h1>
+        <p>เครื่องมือตรวจสอบรูปภาพอัจฉริยะด้วย Teachable Machine</p>
+    </section>
+
+    <section id="check">
+        <h2>ตรวจสอบรูปภาพ</h2>
+        <p>คลิกที่ปุ่มด้านล่างเพื่ออัปโหลดภาพที่ต้องการวิเคราะห์</p>
+        
+        <label class="custom-file-upload">
+            <input type="file" accept="image/*" onchange="handleImageUpload(event)">
+            เลือกภาพ
+        </label>
+
+        <div id="result">คลาสที่ทำนาย: -</div>
+    </section>
+
+    <section id="about">
+        <h2>About Us</h2>
+        <p>เว็บไซต์นี้สร้างขึ้นเพื่อทดสอบการใช้งาน Image Classification แบบ Real-time</p>
+        <p>พัฒนาโดยใช้ TensorFlow.js</p>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script>
+        // --- ส่วนการเปลี่ยนหน้า ---
+        function showPage(pageId) {
+            const pages = document.querySelectorAll('section');
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // --- ส่วนของ AI (จากโค้ดที่แล้ว) ---
+        const URL = "https://teachablemachine.withgoogle.com/models/Y86QIDpXA/";
+        let model, resultContainer;
+
+        async function loadModel() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            resultContainer = document.getElementById("result");
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = async function() {
+                    await predict(img);
+                };
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // ล้างค่าหลังทำนายเสร็จ
+        }
+
+        async function predict(imgElement) {
+            if (!model) return;
+            const predictions = await model.predict(imgElement);
+            
+            let maxProb = 0;
+            let bestClass = "";
+
+            for (let i = 0; i < predictions.length; i++) {
+                if (predictions[i].probability > maxProb) {
+                    maxProb = predictions[i].probability;
+                    bestClass = predictions[i].className;
+                }
+            }
+            resultContainer.innerHTML = `คลาสที่ทำนาย: <span style="color:#4CAF50">${bestClass}</span> <br>ความแม่นยำ: ${(maxProb * 100).toFixed(2)}%`;
+        }
+
+        loadModel();
+    </script>
+</body>
+</html>
